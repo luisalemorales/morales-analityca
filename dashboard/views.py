@@ -4,7 +4,6 @@ from django.shortcuts import render, redirect
 from django.http import JsonResponse, HttpResponse
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
 from .models import Cliente
 
@@ -21,7 +20,7 @@ def login_view(request):
             login(request, user)
             return redirect('dashboard')
         else:
-            messages.error(request, "ACCESO DENEGADO: Credenciales de ciberinteligencia no válidas.")
+            messages.error(request, "ACCESO DENEGADO: Credenciales de Morales Analítica no válidas.")
             
     return render(request, 'dashboard/login.html')
 
@@ -32,10 +31,8 @@ def logout_view(request):
 @login_required
 def dashboard_view(request):
     clientes = Cliente.objects.all()
-    # We can pass some quick stats to the dashboard
     total_clientes = clientes.count()
     
-    # Calculate some summary stats for OCEAN averages
     avg_o = avg_c = avg_e = avg_a = avg_n = 0
     if total_clientes > 0:
         avg_o = sum(c.ocean_o for c in clientes) // total_clientes
@@ -56,46 +53,50 @@ def dashboard_view(request):
 
 @login_required
 def api_clientes(request):
-    if request.method == 'GET':
-        clientes = Cliente.objects.all()
-        data = []
-        for c in clientes:
-            data.append({
-                'id': c.id,
-                'nombre': c.nombre,
-                'empresa': c.empresa or '',
-                'telefono': c.telefono or '',
-                'direccion': c.direccion or '',
-                'latitud': c.latitud,
-                'longitud': c.longitud,
-                'ocean_o': c.ocean_o,
-                'ocean_c': c.ocean_c,
-                'ocean_e': c.ocean_e,
-                'ocean_a': c.ocean_a,
-                'ocean_n': c.ocean_n,
-                'comportamiento_compra': c.comportamiento_compra,
-                'estilo_decision': c.estilo_decision,
-                'disparadores_compra': c.disparadores_compra or '',
-                'intereses': c.intereses or '',
-            })
-        return JsonResponse({'status': 'success', 'data': data})
-        
-    elif request.method == 'POST':
+    """Devuelve la lista completa de clientes para renderizar en el mapa y la tabla."""
+    clientes = Cliente.objects.all()
+    data = []
+    for c in clientes:
+        data.append({
+            'id': c.id,
+            'nombre': c.nombre,
+            'empresa': c.empresa or '',
+            'telefono': c.telefono or '',
+            'direccion': c.direccion or '',
+            'latitud': c.latitud,
+            'longitud': c.longitud,
+            'ocean_o': c.ocean_o,
+            'ocean_c': c.ocean_c,
+            'ocean_e': c.ocean_e,
+            'ocean_a': c.ocean_a,
+            'ocean_n': c.ocean_n,
+            'comportamiento_compra': c.comportamiento_compra,
+            'estilo_decision': c.estilo_decision,
+            'disparadores_compra': c.disparadores_compra or '',
+            'intereses': c.intereses or '',
+        })
+    return JsonResponse({'status': 'success', 'data': data})
+
+@login_required
+def crear_cliente(request):
+    """Guarda un nuevo cliente o actualiza un cliente existente."""
+    if request.method == 'POST':
         try:
-            # Can be JSON or standard form POST depending on how the frontend sends it
             if request.content_type == 'application/json':
-                body = json.loads(request.body)
-                data_source = body
+                data_source = json.loads(request.body)
             else:
                 data_source = request.POST
                 
             nombre = data_source.get('nombre')
-            latitud = float(data_source.get('latitud'))
-            longitud = float(data_source.get('longitud'))
+            latitud_str = data_source.get('latitud')
+            longitud_str = data_source.get('longitud')
             
-            if not nombre or latitud is None or longitud is None:
-                return JsonResponse({'status': 'error', 'message': 'Faltan campos obligatorios (Nombre, Latitud, Longitud).'}, status=400)
+            if not nombre or latitud_str is None or longitud_str is None:
+                return JsonResponse({'status': 'error', 'message': 'Campos obligatorios incompletos (Nombre, Latitud, Longitud).'}, status=400)
                 
+            latitud = float(latitud_str)
+            longitud = float(longitud_str)
+            
             cliente = Cliente(
                 nombre=nombre,
                 empresa=data_source.get('empresa', ''),
@@ -108,15 +109,13 @@ def api_clientes(request):
                 ocean_e=int(data_source.get('ocean_e', 50)),
                 ocean_a=int(data_source.get('ocean_a', 50)),
                 ocean_n=int(data_source.get('ocean_n', 50)),
-                intereses=data_source.get('intereses', ''),
-                comportamiento_compra=data_source.get('comportamiento_compra', ''),
-                estilo_decision=data_source.get('estilo_decision', ''),
-                disparadores_compra=data_source.get('disparadores_compra', '')
+                intereses=data_source.get('intereses', '')
             )
             cliente.save()
+            
             return JsonResponse({
                 'status': 'success', 
-                'message': 'Cliente registrado correctamente.',
+                'message': 'Cliente guardado exitosamente.',
                 'cliente': {
                     'id': cliente.id,
                     'nombre': cliente.nombre,
@@ -156,17 +155,15 @@ def exportar_excel(request):
             })
             
         df = pd.DataFrame(data)
-        
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = 'attachment; filename="psycho_target_mapping.xlsx"'
+        response['Content-Disposition'] = 'attachment; filename="morales_analitica_clientes.xlsx"'
         
-        # Save to response object via pandas
         with pd.ExcelWriter(response, engine='openpyxl') as writer:
             df.to_excel(writer, index=False, sheet_name='Clientes')
             
         return response
     except Exception as e:
-        messages.error(request, f"Error al exportar base de datos: {str(e)}")
+        messages.error(request, f"Error al exportar la base de datos: {str(e)}")
         return redirect('dashboard')
 
 @login_required
@@ -174,7 +171,7 @@ def importar_excel(request):
     if request.method == 'POST':
         file = request.FILES.get('excel_file')
         if not file:
-            messages.error(request, "No se ha subido ningún archivo.")
+            messages.error(request, "No se seleccionó ningún archivo.")
             return redirect('dashboard')
             
         try:
@@ -183,14 +180,11 @@ def importar_excel(request):
             elif file.name.endswith('.csv'):
                 df = pd.read_csv(file)
             else:
-                messages.error(request, "Formato no soportado. Debe ser .xlsx o .csv")
+                messages.error(request, "Formato invalido. Formatos soportados: .xlsx o .csv")
                 return redirect('dashboard')
                 
-            # Normalize column names to map correctly
             df.columns = [col.strip().lower() for col in df.columns]
             
-            # Map columns
-            # We look for synonyms
             col_mappings = {
                 'nombre': ['nombre', 'name', 'nombre completo', 'fullname'],
                 'empresa': ['empresa', 'company', 'rubro', 'organization'],
@@ -211,7 +205,6 @@ def importar_excel(request):
             
             created_count = 0
             for index, row in df.iterrows():
-                # Helper function to get row value by mapped column names
                 def get_val(field_name, default=None):
                     for option in col_mappings[field_name]:
                         if option in df.columns:
@@ -223,9 +216,8 @@ def importar_excel(request):
                 
                 nombre = get_val('nombre')
                 if not nombre:
-                    continue # Skip empty rows or rows without name
+                    continue
                     
-                # Latitude & Longitude are critical, if missing we set 0.0 or skip
                 lat_val = get_val('latitud')
                 lng_val = get_val('longitud')
                 try:
@@ -235,19 +227,12 @@ def importar_excel(request):
                     latitud = 0.0
                     longitud = 0.0
                     
-                # OCEAN scores (default to 50)
                 def get_ocean_score(field):
                     val = get_val(field, 50)
                     try:
                         return int(float(val))
                     except ValueError:
                         return 50
-                
-                o_val = get_ocean_score('ocean_o')
-                c_val = get_ocean_score('ocean_c')
-                e_val = get_ocean_score('ocean_e')
-                a_val = get_ocean_score('ocean_a')
-                n_val = get_ocean_score('ocean_n')
                 
                 cliente = Cliente(
                     nombre=str(nombre),
@@ -256,27 +241,25 @@ def importar_excel(request):
                     direccion=str(get_val('direccion', '')) if get_val('direccion') else '',
                     latitud=latitud,
                     longitud=longitud,
-                    ocean_o=o_val,
-                    ocean_c=c_val,
-                    ocean_e=e_val,
-                    ocean_a=a_val,
-                    ocean_n=n_val,
-                    intereses=str(get_val('intereses', '')) if get_val('intereses') else '',
-                    comportamiento_compra=str(get_val('comportamiento_compra', '')) if get_val('comportamiento_compra') else '',
-                    estilo_decision=str(get_val('estilo_decision', '')) if get_val('estilo_decision') else '',
-                    disparadores_compra=str(get_val('disparadores_compra', '')) if get_val('disparadores_compra') else ''
+                    ocean_o=get_ocean_score('ocean_o'),
+                    ocean_c=get_ocean_score('ocean_c'),
+                    ocean_e=get_ocean_score('ocean_e'),
+                    ocean_a=get_ocean_score('ocean_a'),
+                    ocean_n=get_ocean_score('ocean_n'),
+                    intereses=str(get_val('intereses', '')) if get_val('intereses') else ''
                 )
                 cliente.save()
                 created_count += 1
                 
-            messages.success(request, f"Importación masiva completada: {created_count} clientes registrados.")
+            messages.success(request, f"Carga masiva exitosa: {created_count} clientes procesados.")
         except Exception as e:
-            messages.error(request, f"Error al procesar el archivo: {str(e)}")
+            messages.error(request, f"Error al leer el archivo: {str(e)}")
             
     return redirect('dashboard')
 
 @login_required
 def eliminar_clientes(request):
+    """Procesa la eliminación individual o múltiple de prospectos."""
     if request.method == 'POST':
         try:
             if request.content_type == 'application/json':
@@ -287,12 +270,12 @@ def eliminar_clientes(request):
                 ids = [int(i) for i in ids_str.split(',') if i.strip()]
                 
             if not ids:
-                return JsonResponse({'status': 'error', 'message': 'No se proporcionaron identificadores para eliminar.'}, status=400)
+                return JsonResponse({'status': 'error', 'message': 'Seleccione al menos un registro para eliminar.'}, status=400)
                 
             deleted_count, _ = Cliente.objects.filter(id__in=ids).delete()
             return JsonResponse({
                 'status': 'success', 
-                'message': f'Se eliminaron {deleted_count} registros correctamente.',
+                'message': f'Se eliminaron {deleted_count} cliente(s) exitosamente.',
                 'deleted_count': deleted_count
             })
         except Exception as e:

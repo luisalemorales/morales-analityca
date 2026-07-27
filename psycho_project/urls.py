@@ -1,23 +1,18 @@
-"""
-URL configuration for psycho_project project.
+from django.urls import path
+from . import views
 
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/6.0/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
-from django.contrib import admin
-from django.urls import path, include
+# IMPORTANTE: Si esta línea existe en tu archivo, tenlo en cuenta para el paso 2
+# app_name = 'dashboard' 
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('', include('dashboard.urls')),
+    path('', views.dashboard_view, name='dashboard'),
+    
+    # Esta línea resuelve tu error NoReverseMatch:
+    path('registrar-cliente/', views.registrar_cliente, name='registrar_cliente'),
+    
+    # Asegúrate de tener también las demás rutas que usa tu plantilla:
+    path('api/clientes/', views.api_clientes, name='api_clientes'),
+    path('exportar-excel/', views.exportar_excel, name='exportar_excel'),
+    path('importar-excel/', views.importar_excel, name='importar_excel'),
+    path('eliminar-masivo/', views.eliminar_masivo, name='eliminar_masivo'),
 ]

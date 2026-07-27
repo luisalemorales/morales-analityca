@@ -1,7 +1,7 @@
-from django.contrib import admin
-from django.urls import path, include
+from django.urls import path
+from . import views
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('', include('dashboard.urls')),  # Conecta las URLs de tu app dashboard
+    path('', views.dashboard_view, name='dashboard'),
+    path('registrar-cliente/', views.registrar_cliente, name='registrar_cliente'),
 ]

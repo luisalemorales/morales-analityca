@@ -89,33 +89,45 @@ def crear_cliente(request):
                 
             cliente_id = data_source.get('id')
             nombre = data_source.get('nombre')
-            latitud_str = data_source.get('latitud')
-            longitud_str = data_source.get('longitud')
             
-            if not nombre or latitud_str is None or longitud_str is None:
-                return JsonResponse({'status': 'error', 'message': 'Campos obligatorios incompletos (Nombre, Latitud, Longitud).'}, status=400)
+            if not nombre or str(nombre).strip() == '':
+                return JsonResponse({'status': 'error', 'message': 'El campo Nombre es obligatorio.'}, status=400)
                 
-            latitud = float(latitud_str)
-            longitud = float(longitud_str)
+            # Procesar coordenadas de forma segura
+            def parse_float(val, default=0.0):
+                try:
+                    return float(val) if val not in [None, ''] else default
+                except (ValueError, TypeError):
+                    return default
+
+            # Procesar valores OCEAN de forma segura
+            def parse_int(val, default=50):
+                try:
+                    return int(float(val)) if val not in [None, ''] else default
+                except (ValueError, TypeError):
+                    return default
+
+            latitud = parse_float(data_source.get('latitud'))
+            longitud = parse_float(data_source.get('longitud'))
             
-            # Buscar cliente si viene un ID (editar) o crear uno nuevo
+            # Crear o buscar cliente
             if cliente_id:
                 cliente = Cliente.objects.get(id=cliente_id)
-                cliente.nombre = nombre
+                cliente.nombre = str(nombre).strip()
             else:
-                cliente = Cliente(nombre=nombre)
+                cliente = Cliente(nombre=str(nombre).strip())
 
-            cliente.empresa = data_source.get('empresa', '')
-            cliente.telefono = data_source.get('telefono', '')
-            cliente.direccion = data_source.get('direccion', '')
+            cliente.empresa = str(data_source.get('empresa', '')).strip()
+            cliente.telefono = str(data_source.get('telefono', '')).strip()
+            cliente.direccion = str(data_source.get('direccion', '')).strip()
             cliente.latitud = latitud
             cliente.longitud = longitud
-            cliente.ocean_o = int(data_source.get('ocean_o', 50))
-            cliente.ocean_c = int(data_source.get('ocean_c', 50))
-            cliente.ocean_e = int(data_source.get('ocean_e', 50))
-            cliente.ocean_a = int(data_source.get('ocean_a', 50))
-            cliente.ocean_n = int(data_source.get('ocean_n', 50))
-            cliente.intereses = data_source.get('intereses', '')
+            cliente.ocean_o = parse_int(data_source.get('ocean_o'))
+            cliente.ocean_c = parse_int(data_source.get('ocean_c'))
+            cliente.ocean_e = parse_int(data_source.get('ocean_e'))
+            cliente.ocean_a = parse_int(data_source.get('ocean_a'))
+            cliente.ocean_n = parse_int(data_source.get('ocean_n'))
+            cliente.intereses = str(data_source.get('intereses', '')).strip()
 
             cliente.save()
             
@@ -130,11 +142,11 @@ def crear_cliente(request):
                 }
             })
         except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+            return JsonResponse({'status': 'error', 'message': f'Error al procesar los datos: {str(e)}'}, status=400)
             
     return JsonResponse({'status': 'error', 'message': 'Método no permitido.'}, status=405)
 
-# Alias para evitar descalce si el template invoca registrar_cliente
+# Alias para evitar problemas de compatibilidad en plantillas
 registrar_cliente = crear_cliente
 
 @login_required

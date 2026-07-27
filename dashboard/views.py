@@ -87,6 +87,7 @@ def crear_cliente(request):
             else:
                 data_source = request.POST
                 
+            cliente_id = data_source.get('id')
             nombre = data_source.get('nombre')
             latitud_str = data_source.get('latitud')
             longitud_str = data_source.get('longitud')
@@ -97,20 +98,25 @@ def crear_cliente(request):
             latitud = float(latitud_str)
             longitud = float(longitud_str)
             
-            cliente = Cliente(
-                nombre=nombre,
-                empresa=data_source.get('empresa', ''),
-                telefono=data_source.get('telefono', ''),
-                direccion=data_source.get('direccion', ''),
-                latitud=latitud,
-                longitud=longitud,
-                ocean_o=int(data_source.get('ocean_o', 50)),
-                ocean_c=int(data_source.get('ocean_c', 50)),
-                ocean_e=int(data_source.get('ocean_e', 50)),
-                ocean_a=int(data_source.get('ocean_a', 50)),
-                ocean_n=int(data_source.get('ocean_n', 50)),
-                intereses=data_source.get('intereses', '')
-            )
+            # Buscar cliente si viene un ID (editar) o crear uno nuevo
+            if cliente_id:
+                cliente = Cliente.objects.get(id=cliente_id)
+                cliente.nombre = nombre
+            else:
+                cliente = Cliente(nombre=nombre)
+
+            cliente.empresa = data_source.get('empresa', '')
+            cliente.telefono = data_source.get('telefono', '')
+            cliente.direccion = data_source.get('direccion', '')
+            cliente.latitud = latitud
+            cliente.longitud = longitud
+            cliente.ocean_o = int(data_source.get('ocean_o', 50))
+            cliente.ocean_c = int(data_source.get('ocean_c', 50))
+            cliente.ocean_e = int(data_source.get('ocean_e', 50))
+            cliente.ocean_a = int(data_source.get('ocean_a', 50))
+            cliente.ocean_n = int(data_source.get('ocean_n', 50))
+            cliente.intereses = data_source.get('intereses', '')
+
             cliente.save()
             
             return JsonResponse({
@@ -127,6 +133,9 @@ def crear_cliente(request):
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
             
     return JsonResponse({'status': 'error', 'message': 'Método no permitido.'}, status=405)
+
+# Alias para evitar descalce si el template invoca registrar_cliente
+registrar_cliente = crear_cliente
 
 @login_required
 def exportar_excel(request):

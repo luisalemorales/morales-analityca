@@ -591,390 +591,323 @@
 
     <!-- Page Scripts -->
     <script>
-        // Global state
-        let map;
-        let markersLayer;
-        let clientsList = [];
-        let radarChartInstance = null;
-        let currentSelectedClientId = null;
+        // Data bootstrap from Django Template
+        const targetsData = {{ clientes_json|safe }};
+        let map, radarChartObj;
+        let markersGroup = {};
 
-        // Colors mapped by dominant OCEAN score or profile
-        const psychoColors = {
-            'Apertura': '#f59e0b',       // Amber/Gold
-            'Responsabilidad': '#2563eb', // Blue
-            'Extraversión': '#f43f5e',    // Coral/Red
-            'Amabilidad': '#10b981',      // Neon/Green
-            'Neuroticismo': '#d946ef',    // Magenta/Violet
-            'Explorador': '#f59e0b',
-            'Metódico': '#2563eb',
-            'Entusiasta': '#f43f5e',
-            'Colaborativo': '#10b981',
-            'Prudente': '#a8a29e',
-            'Equilibrado': '#78716c'
-        };
-
-        // Initialize dashboard on load
-        window.addEventListener('DOMContentLoaded', () => {
+        // Initialize Application
+        document.addEventListener('DOMContentLoaded', () => {
             initMap();
-            loadClientsData();
+            renderTargetsList(targetsData);
             
-            // Adjust responsiveness: default active tab on mobile is 'map'
-            if (window.innerWidth < 1024) {
-                switchTab('map');
+            // Auto select target if ID in query string or auto-select first available
+            const urlParams = new URLSearchParams(window.location.search);
+            const targetId = urlParams.get('id');
+            if (targetId) {
+                focusTarget(targetId);
+            } else if (targetsData.length > 0) {
+                // Pre-select first item on load if available
+                focusTarget(targetsData[0].id);
             }
         });
 
-        // Initialize dark mode Leaflet Map (Centered in Monagas, Venezuela)
+        // Initialize Leaflet Map (Light mode theme)
         function initMap() {
+            // Default center: Venezuela coordinates
             const defaultLat = 9.7457;
             const defaultLng = -63.1832;
-            const defaultZoom = 10;
-            
+
             map = L.map('map', {
                 zoomControl: true,
                 attributionControl: false
-            }).setView([defaultLat, defaultLng], defaultZoom);
+            }).setView([defaultLat, defaultLng], 12);
 
-            // CartoDB Dark Matter tiles
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            // Light clean OpenStreetMap tiles
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19
             }).addTo(map);
 
-            markersLayer = L.layerGroup().addTo(map);
-
-            // Click listener on map to set latitude and longitude in form
-            map.on('click', (e) => {
-                const lat = e.latlng.lat;
-                const lng = e.latlng.lng;
-                
-                // Set form coordinates
-                document.getElementById('reg-latitud').value = lat.toFixed(6);
-                document.getElementById('reg-longitud').value = lng.toFixed(6);
-                
-                // Visual feedback marker for inject coordinate selection
-                showTemporarySelectMarker(lat, lng);
-
-                // Auto open registration modal
-                openRegisterModal();
+            // Click listener on map to open quick registration modal with coords
+            map.on('click', function(e) {
+                const lat = e.latlng.lat.toFixed(6);
+                const lng = e.latlng.lng.toFixed(6);
+                openRegisterModal(lat, lng);
             });
+
+            // Plot existing target markers on map
+            plotMarkers();
         }
 
-        let tempMarker = null;
-        function showTemporarySelectMarker(lat, lng) {
-            if (tempMarker) {
-                map.removeLayer(tempMarker);
-            }
-            tempMarker = L.circleMarker([lat, lng], {
-                radius: 8,
-                color: '#10b981',
-                fillColor: '#10b981',
-                fillOpacity: 0.8,
-                weight: 2
-            }).addTo(map);
-            
-            tempMarker.bindPopup("<div class='font-mono text-[10px] text-white'><b>INYECTAR COORDENADAS</b><br>Lat: " + lat.toFixed(5) + "<br>Lng: " + lng.toFixed(5) + "</div>").openPopup();
-        }
+        // Plot Markers with customized color coding based on dominant OCEAN trait
+        function plotMarkers() {
+            targetsData.forEach(target => {
+                if (!target.latitud || !target.longitud) return;
 
-        // Fetch clients JSON from API
-        function loadClientsData() {
-            fetch("{% url 'api_clientes' %}")
-                .then(response => response.json())
-                .then(payload => {
-                    if (payload.status === 'success') {
-                        clientsList = payload.data;
-                        renderClients(clientsList);
-                        plotClientsOnMap(clientsList);
-                        document.getElementById('header-target-count').innerText = clientsList.length;
-                        updateBulkDeleteBtnState();
-                    }
-                })
-                .catch(error => {
-                    console.error("Error al cargar prospectos:", error);
-                });
-        }
+                // Determine dominant trait for color coding
+                const dominant = getDominantTrait(target);
+                let markerColor = '#d97706'; // default amber
 
-        // Plot client markers on map
-        function plotClientsOnMap(clients) {
-            markersLayer.clearLayers();
-            
-            if (clients.length === 0) return;
+                if (dominant === 'O') markerColor = '#d97706'; // Gold/Amber
+                else if (dominant === 'C') markerColor = '#2563eb'; // Blue
+                else if (dominant === 'E') markerColor = '#e11d48'; // Coral/Rose
+                else if (dominant === 'A') markerColor = '#059669'; // Neon Emerald
+                else if (dominant === 'N') markerColor = '#db2777'; // Pink
 
-            clients.forEach(c => {
-                const color = getClientPrimaryColor(c);
-                
-                const marker = L.circleMarker([c.latitud, c.longitud], {
-                    radius: 7,
-                    fillColor: color,
-                    color: '#ffffff',
-                    weight: 1,
-                    fillOpacity: 0.85
+                const customIcon = L.divIcon({
+                    className: 'custom-map-marker',
+                    html: `<div style="background-color: ${markerColor}; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #ffffff; box-shadow: 0 0 8px ${markerColor};"></div>`,
+                    iconSize: [14, 14],
+                    iconAnchor: [7, 7]
                 });
 
-                // Build dark styled popup
-                const popupContent = `
-                    <div class="font-mono text-[11px] text-gray-200">
-                        <span class="text-xs font-bold text-white block uppercase">${c.nombre}</span>
-                        <span class="text-[9px] text-gray-400 block">${c.empresa || 'Sin empresa'}</span>
-                        <div class="h-px bg-cyberBorder my-1.5"></div>
-                        <div class="flex flex-col gap-0.5 mb-1.5">
-                            <div><span class="text-cyberGold">Compra:</span> ${c.comportamiento_compra}</div>
-                            <div><span class="text-cyberBlue">Estilo:</span> ${c.estilo_decision}</div>
-                        </div>
-                        <button onclick="selectClient(${c.id})" class="w-full bg-cyberGold/20 hover:bg-cyberGold text-cyberGold hover:text-black font-bold uppercase text-[9px] py-1 border border-cyberGold/50 rounded transition-all cursor-pointer">
-                            DESBLOQUEAR PERFIL
-                        </button>
-                    </div>
-                `;
+                const marker = L.marker([target.latitud, target.longitud], { icon: customIcon }).addTo(map);
                 
-                marker.bindPopup(popupContent);
+                marker.bindTooltip(`<b>${target.nombre_completo}</b><br>${target.empresa || ''}`, {
+                    permanent: false,
+                    direction: 'top',
+                    className: 'font-mono text-[10px]'
+                });
+
                 marker.on('click', () => {
-                    selectClient(c.id);
+                    focusTarget(target.id);
                 });
-                
-                markersLayer.addLayer(marker);
+
+                markersGroup[target.id] = marker;
             });
+
+            // Auto-fit bounds if markers exist
+            if (targetsData.length > 0) {
+                const validCoords = targetsData
+                    .filter(t => t.latitud && t.longitud)
+                    .map(t => [t.latitud, t.longitud]);
+                if (validCoords.length > 0) {
+                    const bounds = L.latLngBounds(validCoords);
+                    map.fitBounds(bounds, { padding: [40, 40] });
+                }
+            }
         }
 
-        // Helper to determine dot marker colors
-        function getClientPrimaryColor(c) {
-            const ocean = {
-                'Apertura': c.ocean_o,
-                'Responsabilidad': c.ocean_c,
-                'Extraversión': c.ocean_e,
-                'Amabilidad': c.ocean_a,
-                'Neuroticismo': c.ocean_n
+        // Determine dominant OCEAN trait
+        function getDominantTrait(target) {
+            const traits = {
+                O: target.apertura || 0,
+                C: target.responsabilidad || 0,
+                E: target.extraversion || 0,
+                A: target.amabilidad || 0,
+                N: target.neuroticismo || 0
             };
-            const maxTrait = Object.keys(ocean).reduce((a, b) => ocean[a] > ocean[b] ? a : b);
-            return psychoColors[maxTrait] || '#2563eb';
+            return Object.keys(traits).reduce((a, b) => traits[a] > traits[b] ? a : b);
         }
 
-        // Render targets lists in the sidebars
-        function renderClients(clients) {
-            const desktopList = document.getElementById('targets-list');
-            desktopList.innerHTML = '';
-            
-            const mobileList = document.getElementById('targets-list-mobile');
-            mobileList.innerHTML = '';
+        // Render Targets List into Sidebar/Mobile containers
+        function renderTargetsList(data) {
+            const listContainer = document.getElementById('targets-list');
+            const listContainerMobile = document.getElementById('targets-list-mobile');
 
-            if (clients.length === 0) {
-                const emptyHTML = `<div class="text-center py-6 text-[10px] text-gray-500 font-mono">SIN REGISTROS</div>`;
-                desktopList.innerHTML = emptyHTML;
-                mobileList.innerHTML = emptyHTML;
+            if (data.length === 0) {
+                const emptyHTML = '<div class="text-center py-6 text-xs text-slate-400 font-mono">Sin clientes registrados.</div>';
+                if (listContainer) listContainer.innerHTML = emptyHTML;
+                if (listContainerMobile) listContainerMobile.innerHTML = emptyHTML;
                 return;
             }
 
-            clients.forEach(c => {
-                const color = getClientPrimaryColor(c);
-                const itemHTML = `
-                    <div onclick="selectClient(${c.id})" 
-                         class="p-2 bg-cyberBg border border-cyberBorder/65 hover:border-cyberGold/60 rounded cursor-pointer transition-all flex items-center justify-between group">
-                        <div class="flex items-center gap-2 min-w-0">
-                            <!-- Checkbox for bulk deletion -->
-                            <input type="checkbox" class="client-select-cb flex-shrink-0 accent-cyberGold cursor-pointer" 
-                                   value="${c.id}" onclick="event.stopPropagation(); updateBulkDeleteBtnState();" />
-                            <div class="min-w-0">
-                                <span class="text-xs font-bold text-white group-hover:text-cyberGold transition-all block truncate">${c.nombre}</span>
-                                <span class="text-[9px] text-gray-500 block truncate">${c.empresa || 'Sin empresa'}</span>
+            let html = '';
+            data.forEach(item => {
+                html += `
+                    <div id="target-card-${item.id}" onclick="focusTarget(${item.id})" 
+                         class="target-card bg-slate-50 hover:bg-amber-50/50 border border-cyberBorder hover:border-amber-300 p-2.5 rounded transition-all cursor-pointer flex items-center justify-between group">
+                        <div class="flex items-center gap-2 overflow-hidden">
+                            <input type="checkbox" value="${item.id}" onclick="event.stopPropagation(); toggleBulkDeleteBtn();" class="target-checkbox rounded border-slate-300 text-amber-600 focus:ring-amber-500">
+                            <div class="truncate">
+                                <span class="text-xs font-bold text-slate-900 group-hover:text-amber-700 block truncate font-mono">${item.nombre_completo}</span>
+                                <span class="text-[9px] text-slate-500 font-mono block truncate">${item.empresa || 'Cliente Particular'}</span>
                             </div>
                         </div>
-                        <div class="flex items-center gap-1.5 flex-shrink-0">
-                            <span class="w-2.5 h-2.5 rounded-full border border-white/20" style="background-color: ${color}"></span>
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-gray-600 group-hover:text-cyberGold transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                            </svg>
+                        <div class="text-right flex-shrink-0 font-mono">
+                            <span class="text-[9px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 font-bold block">ID #${item.id}</span>
                         </div>
                     </div>
                 `;
-                desktopList.innerHTML += itemHTML;
-                mobileList.innerHTML += itemHTML;
             });
+
+            if (listContainer) listContainer.innerHTML = html;
+            if (listContainerMobile) listContainerMobile.innerHTML = html;
         }
 
-        // Enable / Disable Bulk Delete Button
-        function updateBulkDeleteBtnState() {
-            const checked = document.querySelectorAll('.client-select-cb:checked');
-            const btn = document.getElementById('bulk-delete-btn');
-            const btnMobile = document.getElementById('bulk-delete-btn-mobile');
-            if (checked.length > 0) {
-                if (btn) btn.disabled = false;
-                if (btnMobile) btnMobile.disabled = false;
-            } else {
-                if (btn) btn.disabled = true;
-                if (btnMobile) btnMobile.disabled = true;
-            }
-        }
-
-        // Filters target lists based on search bar text
+        // Filter Targets List on search input
         function filterTargets() {
             const query = document.getElementById('target-search').value.toLowerCase();
-            const filtered = clientsList.filter(c => 
-                c.nombre.toLowerCase().includes(query) || 
-                (c.empresa && c.empresa.toLowerCase().includes(query))
+            const filtered = targetsData.filter(t => 
+                t.nombre_completo.toLowerCase().includes(query) || 
+                (t.empresa && t.empresa.toLowerCase().includes(query)) ||
+                (t.telefono && t.telefono.includes(query))
             );
-            renderClients(filtered);
+            renderTargetsList(filtered);
         }
 
         function filterTargetsMobile() {
             const query = document.getElementById('target-search-mobile').value.toLowerCase();
-            const filtered = clientsList.filter(c => 
-                c.nombre.toLowerCase().includes(query) || 
-                (c.empresa && c.empresa.toLowerCase().includes(query))
+            const filtered = targetsData.filter(t => 
+                t.nombre_completo.toLowerCase().includes(query) || 
+                (t.empresa && t.empresa.toLowerCase().includes(query)) ||
+                (t.telefono && t.telefono.includes(query))
             );
-            renderClients(filtered);
+            renderTargetsList(filtered);
         }
 
-        // Select Client to display its Profile and Radar Chart
-        function selectClient(id) {
-            const client = clientsList.find(c => c.id === id);
-            if (!client) return;
+        // Focus and display selected Target details
+        function focusTarget(id) {
+            const target = targetsData.find(t => t.id == id);
+            if (!target) return;
 
-            currentSelectedClientId = id;
+            // Highlight selected card in lists
+            document.querySelectorAll('.target-card').forEach(c => c.classList.remove('border-amber-500', 'bg-amber-50'));
+            const selectedCard = document.getElementById(`target-card-${id}`);
+            if (selectedCard) selectedCard.classList.add('border-amber-500', 'bg-amber-50');
 
-            // Show active detail state and hide empty state
+            // Pan map to marker if coordinates exist
+            if (target.latitud && target.longitud && map) {
+                map.setView([target.latitud, target.longitud], 14, { animate: true });
+                if (markersGroup[id]) {
+                    markersGroup[id].openTooltip();
+                }
+            }
+
+            // Populate Detail Panel
             document.getElementById('detail-empty-state').classList.add('hidden');
             document.getElementById('detail-active-state').classList.remove('hidden');
 
-            // Populate text elements
-            document.getElementById('det-nombre').innerText = client.nombre;
-            document.getElementById('det-empresa').innerText = client.empresa || 'RUBRO NO DECLARADO';
-            document.getElementById('det-telefono').innerText = client.telefono || 'SIN REGISTRO';
-            document.getElementById('det-direccion').innerText = client.direccion || 'SIN LOCALIZACIÓN';
-            document.getElementById('det-coordenadas').innerText = `${client.latitud.toFixed(5)}, ${client.longitud.toFixed(5)}`;
-            
-            document.getElementById('det-decision-style').innerText = client.estilo_decision.toUpperCase();
-            document.getElementById('det-comportamiento-compra').innerText = client.comportamiento_compra.toUpperCase();
-            document.getElementById('det-sales-triggers').innerText = client.disparadores_compra || 'No calculados.';
-            document.getElementById('det-intereses').innerText = client.intereses || 'Ninguno especificado.';
+            document.getElementById('det-nombre').innerText = target.nombre_completo;
+            document.getElementById('det-empresa').innerText = target.empresa ? `Empresa/Finca: ${target.empresa}` : 'Cliente Particular';
+            document.getElementById('det-telefono').innerText = target.telefono || 'N/A';
+            document.getElementById('det-direccion').innerText = target.direccion || 'N/A';
+            document.getElementById('det-coordenadas').innerText = (target.latitud && target.longitud) ? `${target.latitud}, ${target.longitud}` : 'Sin ubicar';
 
-            // Render Radar Chart for Client OCEAN Scores
-            renderRadarChart(client);
+            // Qualitative sales profile data
+            document.getElementById('det-decision-style').innerText = target.estilo_decision || 'No determinado';
+            document.getElementById('det-comportamiento-compra').innerText = target.comportamiento_compra || 'No determinado';
+            document.getElementById('det-sales-triggers').innerText = target.disparadores_venta || 'Sin disparadores definidos.';
+            document.getElementById('det-intereses').innerText = target.intereses || 'Sin intereses registrados.';
 
-            // Center map on client and zoom in slightly
-            map.setView([client.latitud, client.longitud], 11);
+            // Render Radar Chart with client OCEAN metrics
+            renderRadarChart(target);
 
-            // Highlight target list item by selecting 'detail' tab on mobile
-            if (window.innerWidth < 1024) {
-                switchTab('detail');
-            }
+            // Store current active ID on detail block
+            document.getElementById('detail-active-state').dataset.activeId = id;
         }
 
-        // Render OCEAN Radar Chart
-        function renderRadarChart(client) {
+        // Render OCEAN Radar Chart with Chart.js
+        function renderRadarChart(target) {
             const ctx = document.getElementById('radarChart').getContext('2d');
-            
-            if (radarChartInstance !== null) {
-                radarChartInstance.destroy();
+
+            if (radarChartObj) {
+                radarChartObj.destroy();
             }
 
-            const data = {
-                labels: ['Apertura (O)', 'Conciencia (C)', 'Extraversión (E)', 'Amabilidad (A)', 'Neuroticismo (N)'],
-                datasets: [{
-                    label: 'PUNTOS PSICOGRÁFICOS',
-                    data: [client.ocean_o, client.ocean_c, client.ocean_e, client.ocean_a, client.ocean_n],
-                    fill: true,
-                    backgroundColor: 'rgba(245, 158, 11, 0.15)',
-                    borderColor: '#f59e0b',
-                    pointBackgroundColor: '#ffffff',
-                    pointBorderColor: '#2563eb',
-                    pointHoverBackgroundColor: '#2563eb',
-                    pointHoverBorderColor: '#ffffff',
-                    borderWidth: 2
-                }]
-            };
-
-            const options = {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                },
-                scales: {
-                    r: {
-                        grid: {
-                            color: '#30363d'
-                        },
-                        angleLines: {
-                            color: '#30363d'
-                        },
-                        pointLabels: {
-                            color: '#8b949e',
-                            font: {
-                                size: 9,
-                                family: 'Roboto Mono'
-                            }
-                        },
-                        ticks: {
-                            color: '#8b949e',
-                            backdropColor: 'transparent',
-                            font: {
-                                size: 8
-                            },
-                            stepSize: 20
-                        },
-                        min: 0,
-                        max: 100
-                    }
-                }
-            };
-
-            radarChartInstance = new Chart(ctx, {
+            radarChartObj = new Chart(ctx, {
                 type: 'radar',
-                data: data,
-                options: options
-            });
-        }
-
-        // Live Sliders Value Update
-        function updateSliderVal(trait, val) {
-            document.getElementById(`val-${trait}`).innerText = val + '%';
-        }
-
-        // Switch Tabs in Mobile view
-        function switchTab(tabId) {
-            const contents = document.querySelectorAll('.tab-content');
-            contents.forEach(c => {
-                c.classList.add('hidden');
-                if (c.id === 'section-detail') {
-                    c.classList.remove('md:col-span-7');
+                data: {
+                    labels: ['Apertura (O)', 'Responsab. (C)', 'Extravers. (E)', 'Amabilidad (A)', 'Neurotic. (N)'],
+                    datasets: [{
+                        label: 'Puntaje Psicográfico',
+                        data: [
+                            target.apertura || 0,
+                            target.responsabilidad || 0,
+                            target.extraversion || 0,
+                            target.amabilidad || 0,
+                            target.neuroticismo || 0
+                        ],
+                        backgroundColor: 'rgba(217, 119, 6, 0.2)',
+                        borderColor: '#d97706',
+                        pointBackgroundColor: '#d97706',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: '#d97706',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { color: '#e2e8f0' },
+                            grid: { color: '#e2e8f0' },
+                            pointLabels: {
+                                font: { family: 'monospace', size: 9, weight: 'bold' },
+                                color: '#475569'
+                            },
+                            ticks: {
+                                display: false,
+                                beginAtZero: true,
+                                max: 100
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
                 }
             });
+        }
 
-            const navButtons = document.querySelectorAll('nav button');
-            navButtons.forEach(btn => {
-                btn.classList.remove('text-cyberGold');
-                btn.classList.add('text-gray-500');
-            });
+        // Delete current active client
+        function deleteCurrentClient() {
+            const activeId = document.getElementById('detail-active-state').dataset.activeId;
+            if (!activeId) return;
 
-            if (tabId === 'map') {
-                document.getElementById('section-map').classList.remove('hidden');
-                document.getElementById('tab-btn-map').classList.add('text-cyberGold');
-                document.getElementById('tab-btn-map').classList.remove('text-gray-500');
-                setTimeout(() => {
-                    map.invalidateSize();
-                }, 100);
-            } 
-            else if (tabId === 'targets') {
-                document.getElementById('section-targets-mobile').classList.remove('hidden');
-                document.getElementById('tab-btn-targets').classList.add('text-cyberGold');
-                document.getElementById('tab-btn-targets').classList.remove('text-gray-500');
-            } 
-            else if (tabId === 'detail') {
-                document.getElementById('section-detail').classList.remove('hidden');
-                document.getElementById('section-detail').classList.add('w-full');
-                document.getElementById('tab-btn-detail').classList.add('text-cyberGold');
-                document.getElementById('tab-btn-detail').classList.remove('text-gray-500');
-            } 
-            else if (tabId === 'excel') {
-                document.getElementById('section-excel-mobile').classList.remove('hidden');
-                document.getElementById('tab-btn-excel').classList.add('text-cyberGold');
-                document.getElementById('tab-btn-excel').classList.remove('text-gray-500');
+            if (confirm('¿Está seguro de que desea eliminar este registro de cliente permanentemente?')) {
+                window.location.href = `/eliminar-cliente/${activeId}/`;
             }
         }
 
-        // Modal triggers
-        function openRegisterModal() {
+        // Bulk selection and delete controls
+        function toggleBulkDeleteBtn() {
+            const checkboxes = document.querySelectorAll('.target-checkbox:checked');
+            const btnDesktop = document.getElementById('bulk-delete-btn');
+            const btnMobile = document.getElementById('bulk-delete-btn-mobile');
+
+            const hasSelection = checkboxes.length > 0;
+            if (btnDesktop) btnDesktop.disabled = !hasSelection;
+            if (btnMobile) btnMobile.disabled = !hasSelection;
+        }
+
+        function bulkDeleteSelected() {
+            const checkboxes = document.querySelectorAll('.target-checkbox:checked');
+            const ids = Array.from(checkboxes).map(cb => cb.value);
+
+            if (ids.length === 0) return;
+
+            if (confirm(`¿Confirma la eliminación masiva de ${ids.length} cliente(s) seleccionado(s)?`)) {
+                // Post form for bulk deletion
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = "{% url 'eliminar_masivo' %}";
+
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrfmiddlewaretoken';
+                csrfInput.value = '{{ csrf_token }}';
+                form.appendChild(csrfInput);
+
+                const idsInput = document.createElement('input');
+                idsInput.type = 'hidden';
+                idsInput.name = 'ids';
+                idsInput.value = JSON.stringify(ids);
+                form.appendChild(idsInput);
+
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+
+        // Modal Controls
+        function openRegisterModal(lat = '', lng = '') {
+            if (lat && lng) {
+                document.getElementById('reg-latitud').value = lat;
+                document.getElementById('reg-longitud').value = lng;
+            }
             document.getElementById('register-modal').classList.remove('hidden');
             document.getElementById('register-modal').classList.add('flex');
         }
@@ -984,136 +917,10 @@
             document.getElementById('register-modal').classList.remove('flex');
         }
 
-        // Deletion execution logic
-        function executeDeletion(ids) {
-            fetch("{% url 'eliminar_clientes' %}", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRFToken": getCookie("csrftoken")
-                },
-                body: JSON.stringify({ ids: ids })
-            })
-            .then(res => res.json())
-            .then(payload => {
-                if (payload.status === 'success') {
-                    alert(payload.message);
-                    
-                    // Clear selected client view if it was deleted
-                    if (ids.includes(currentSelectedClientId)) {
-                        document.getElementById('detail-active-state').classList.add('hidden');
-                        document.getElementById('detail-empty-state').classList.remove('hidden');
-                        currentSelectedClientId = null;
-                    }
-                    
-                    // Reload data
-                    loadClientsData();
-                } else {
-                    alert("Error de eliminación: " + payload.message);
-                }
-            })
-            .catch(err => {
-                console.error("Error al eliminar registros:", err);
-                alert("Error de red al intentar eliminar.");
-            });
-        }
-
-        // Single client delete
-        function deleteCurrentClient() {
-            if (!currentSelectedClientId) return;
-            if (confirm("¿Está seguro de que desea eliminar a este cliente permanentemente?")) {
-                executeDeletion([currentSelectedClientId]);
-            }
-        }
-
-        // Bulk delete selected checkboxes
-        function bulkDeleteSelected() {
-            const checked = document.querySelectorAll('.client-select-cb:checked');
-            const ids = Array.from(checked).map(cb => parseInt(cb.value));
-            if (ids.length === 0) return;
-            
-            if (confirm(`¿Está seguro de que desea eliminar los ${ids.length} clientes seleccionados?`)) {
-                executeDeletion(ids);
-            }
-        }
-
-        // Submit New Target programmatically via AJAX POST
-        function submitNewTarget(e) {
-            e.preventDefault();
-            
-            const clientData = {
-                nombre: document.getElementById('reg-nombre').value,
-                empresa: document.getElementById('reg-empresa').value,
-                telefono: document.getElementById('reg-telefono').value,
-                latitud: document.getElementById('reg-latitud').value,
-                longitud: document.getElementById('reg-longitud').value,
-                direccion: document.getElementById('reg-direccion').value,
-                ocean_o: document.getElementById('reg-o').value,
-                ocean_c: document.getElementById('reg-c').value,
-                ocean_e: document.getElementById('reg-e').value,
-                ocean_a: document.getElementById('reg-a').value,
-                ocean_n: document.getElementById('reg-n').value,
-                intereses: document.getElementById('reg-intereses').value
-            };
-
-            fetch("{% url 'api_clientes' %}", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRFToken": getCookie("csrftoken")
-                },
-                body: JSON.stringify(clientData)
-            })
-            .then(res => res.json())
-            .then(payload => {
-                if (payload.status === 'success') {
-                    alert("PROCESO COMPLETADO: " + payload.message);
-                    
-                    // Reset form & close modal
-                    document.getElementById('new-target-form').reset();
-                    closeRegisterModal();
-                    
-                    if (tempMarker) {
-                        map.removeLayer(tempMarker);
-                        tempMarker = null;
-                    }
-                    
-                    // Reload data
-                    loadClientsData();
-                    
-                    // Reset sliders values
-                    ['o', 'c', 'e', 'a', 'n'].forEach(t => updateSliderVal(t, 50));
-
-                    // Show newly created customer details
-                    setTimeout(() => {
-                        selectClient(payload.cliente.id);
-                    }, 500);
-                } else {
-                    alert("ERROR DE INYECCIÓN: " + payload.message);
-                }
-            })
-            .catch(err => {
-                console.error("Error al registrar cliente:", err);
-                alert("Error de conexión al inyectar cliente.");
-            });
-        }
-
-        // Helper to get Django CSRF Cookie
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
+        function submitNewTarget(event) {
+            // Default form action handles submission directly to Django view
+            return true;
         }
     </script>
-
 </body>
 </html>

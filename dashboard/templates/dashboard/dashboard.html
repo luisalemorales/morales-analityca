@@ -886,7 +886,7 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r
                 // Post form for bulk deletion
                 const form = document.createElement('form');
                 form.method = 'POST';
-                form.action = "{% url 'eliminar_masivo' %}";
+                form.action = "/eliminar-masivo/";
 
                 const csrfInput = document.createElement('input');
                 csrfInput.type = 'hidden';

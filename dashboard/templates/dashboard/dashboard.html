@@ -591,10 +591,11 @@
 
     <!-- Page Scripts -->
     <script>
-        // Data bootstrap from Django Template
-        const targetsData = {{ clientes_json|safe }};
-        let map, radarChartObj;
-        let markersGroup = {};
+       // Data bootstrap from Django Template
+        const targetsData = {{ clientes_json|safe|default:"[]" }};
+        let map;
+        let radarChartObj;
+        let markersGroup;
 
         // Initialize Application
         document.addEventListener('DOMContentLoaded', () => {

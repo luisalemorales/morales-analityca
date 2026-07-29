@@ -97,6 +97,18 @@
         .leaflet-pane, .leaflet-top, .leaflet-bottom {
             z-index: 20 !important;
         }
+        /* Texto negro y fondo claro en el formulario de registro */
+    input, select, textarea {
+        color: #0f172a !important;
+        background-color: #ffffff !important;
+    }
+
+    /* Aumento de letra general solo para pantallas de PC */
+    @media (min-width: 1024px) {
+        html {
+            font-size: 17px;
+        }
+    }
     </style>
 </head>
 <body class="text-slate-700 font-sans min-h-screen flex flex-col antialiased">
@@ -924,6 +936,32 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r
         function submitNewTarget(event) {
             // Default form action handles submission directly to Django view
             return true;
+        }
+        // Navegación de pestañas móvil (MAPA, CLIENTES, FICHA, EXCEL)
+        function switchTab(tabName) {
+            const sections = ['map-section', 'clients-section', 'ficha-section', 'excel-section'];
+            
+            // Ocultar todas las secciones
+            sections.forEach(sec => {
+                const el = document.getElementById(sec);
+                if (el) el.classList.add('hidden');
+            });
+
+            // Mostrar la sección seleccionada
+            const activeSec = document.getElementById(`${tabName}-section`);
+            if (activeSec) activeSec.classList.remove('hidden');
+
+            // Actualizar color del botón activo abajo
+            const buttons = document.querySelectorAll('[id^="tab-btn-"]');
+            buttons.forEach(btn => btn.classList.remove('text-amber-600'));
+
+            const activeBtn = document.getElementById(`tab-btn-${tabName}`);
+            if (activeBtn) activeBtn.classList.add('text-amber-600');
+
+            // Ajustar el contenedor del mapa para que no quede en blanco
+            if (tabName === 'map' && map) {
+                setTimeout(() => map.invalidateSize(), 200);
+            }
         }
     </script>
 </body>

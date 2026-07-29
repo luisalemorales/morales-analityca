@@ -624,9 +624,12 @@
             }).setView([defaultLat, defaultLng], 12);
 
             // Light clean OpenStreetMap tiles
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19
-            }).addTo(map);
+           // Capa clara estilo Google Maps con nombres de calles nítidos
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap &copy; CARTO',
+    subdomains: 'abcd',
+    maxZoom: 20
+}).addTo(map);
 
             // Click listener on map to open quick registration modal with coords
             map.on('click', function(e) {

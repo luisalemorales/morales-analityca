@@ -64,7 +64,7 @@ class PsychographicAppTests(TestCase):
         response = self.client.get(reverse('dashboard'))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'dashboard/dashboard.html')
-        self.assertContains(response, "PSYCHOGRAPHIC MAPPING NETWORK")
+        self.assertContains(response, "RED DE MAPEO PSICOGRÁFICO")
 
     def test_api_clients_get(self):
         """Verify that authenticated operator can retrieve clients list as JSON."""

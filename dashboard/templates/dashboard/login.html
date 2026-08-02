@@ -15,12 +15,14 @@
             theme: {
                 extend: {
                     colors: {
-                        cyberBg: '#0d1117',
-                        cyberPanel: '#161b22',
-                        cyberBorder: '#30363d',
-                        cyberGold: '#f59e0b',
-                        cyberBlue: '#2563eb',
-                        cyberNeon: '#10b981',
+                        cyberBg: '#f8fafc',      /* Light Slate background */
+                        cyberPanel: '#ffffff',   /* Pure White Panel */
+                        cyberBorder: '#e2e8f0',  /* Slate-200 border */
+                        cyberGold: '#d97706',    /* Darker Amber/Gold for contrast on light mode */
+                        cyberBlue: '#1d4ed8',    /* Darker Cobalt Blue */
+                        cyberNeon: '#059669',    /* Darker Emerald/Neon Green */
+                        cyberText: '#0f172a',    /* Slate-900 text */
+                        cyberSubtext: '#475569', /* Slate-600 subtext */
                     },
                     fontFamily: {
                         sans: ['Inter', 'sans-serif'],
@@ -32,20 +34,20 @@
     </script>
     <style>
         body {
-            background-color: #0d1117;
+            background-color: #f8fafc;
             background-image: 
-                radial-gradient(circle at 50% 50%, rgba(37, 99, 235, 0.05) 0%, transparent 80%),
-                linear-gradient(rgba(48, 54, 61, 0.07) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(48, 54, 61, 0.07) 1px, transparent 1px);
-            background-size: 100% 100%, 20px 20px, 20px 20px;
+                radial-gradient(circle at 50% 50%, rgba(29, 78, 216, 0.03) 0%, transparent 80%),
+                linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+            background-size: 100% 100%, 24px 24px, 24px 24px;
         }
         .scanline {
             height: 2px;
-            background: rgba(245, 158, 11, 0.15);
+            background: rgba(217, 119, 6, 0.08);
             position: absolute;
             left: 0;
             width: 100%;
-            animation: scan 4s linear infinite;
+            animation: scan 6s linear infinite;
             z-index: 10;
             pointer-events: none;
         }
@@ -55,77 +57,77 @@
             100% { top: 0%; }
         }
         .cyber-glow:hover {
-            box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
+            box-shadow: 0 0 15px rgba(217, 119, 6, 0.25);
         }
     </style>
 </head>
-<body class="font-sans min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
-    <!-- Scanline effect for hacker/cyber intelligence aesthetic -->
+<body class="font-sans min-h-screen flex items-center justify-center p-4 relative overflow-hidden text-cyberText">
+    <!-- Scanline effect for high-tech aesthetic in light mode -->
     <div class="scanline"></div>
 
-    <div class="w-full max-w-md bg-cyberPanel border border-cyberBorder rounded-lg p-8 relative z-20 shadow-2xl">
+    <div class="w-full max-w-md bg-cyberPanel border border-cyberBorder rounded-xl p-8 relative z-20 shadow-2xl">
         <!-- Technical details in corners -->
-        <div class="absolute top-2 left-3 font-mono text-[9px] text-gray-500 tracking-wider">ESTADO_SIS: ACTIVO</div>
-        <div class="absolute top-2 right-3 font-mono text-[9px] text-cyberGold animate-pulse">ZONA RESTRINGIDA // NIVEL 4</div>
-        <div class="absolute bottom-2 left-3 font-mono text-[9px] text-gray-600">IP REGISTRADA: {{ request.META.REMOTE_ADDR }}</div>
-        <div class="absolute bottom-2 right-3 font-mono text-[9px] text-gray-600">SECURE SHELL v2.8</div>
+        <div class="absolute top-3 left-4 font-mono text-[10px] text-slate-400 tracking-wider">ESTADO_SIS: ACTIVO</div>
+        <div class="absolute top-3 right-4 font-mono text-[10px] text-cyberGold animate-pulse font-bold">ZONA RESTRINGIDA // NIVEL 4</div>
+        <div class="absolute bottom-3 left-4 font-mono text-[10px] text-slate-400">IP REGISTRADA: {{ request.META.REMOTE_ADDR }}</div>
+        <div class="absolute bottom-3 right-4 font-mono text-[10px] text-slate-400">CONEXIÓN SEGURA v2.8</div>
 
         <!-- Header -->
-        <div class="text-center mb-8 mt-2">
-            <div class="inline-flex items-center justify-center p-3 bg-cyberGold/10 rounded-full border border-cyberGold/30 text-cyberGold mb-4">
+        <div class="text-center mb-8 mt-4">
+            <div class="inline-flex items-center justify-center p-3.5 bg-amber-50 rounded-full border border-cyberGold/30 text-cyberGold mb-4 shadow-sm">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
             </div>
-            <h1 class="text-xl font-bold text-white tracking-widest uppercase font-mono">MORALES ANALÍTICA</h1>
-            <p class="text-xs text-gray-400 mt-1 font-mono tracking-wider">MORALES ANALÍTICA / PANEL DE DIRECCIONAMIENTO RIPON</p>
+            <h1 class="text-2xl font-extrabold text-slate-900 tracking-widest uppercase font-mono">MORALES ANALÍTICA</h1>
+            <p class="text-xs text-cyberSubtext mt-1.5 font-mono tracking-wider">MORALES ANALÍTICA / PANEL DE DIRECCIONAMIENTO RIPON</p>
         </div>
 
         <!-- Messages / Errors -->
         {% if messages %}
         <div class="mb-6 space-y-2">
             {% for message in messages %}
-            <div class="bg-red-900/30 border border-red-500/50 text-red-200 text-xs font-mono p-3 rounded flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-red-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div class="bg-red-50 border border-red-200 text-red-700 text-xs font-mono p-3.5 rounded-lg flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-red-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
-                <span>{{ message }}</span>
+                <span class="font-medium text-sm">{{ message }}</span>
             </div>
             {% endfor %}
         </div>
         {% endif %}
 
         <!-- Form -->
-        <form method="POST" action="{% url 'login' %}" class="space-y-5">
+        <form method="POST" action="{% url 'login' %}" class="space-y-6">
             {% csrf_token %}
             
             <div>
-                <label for="username" class="block font-mono text-[10px] text-gray-400 uppercase tracking-widest mb-1.5 font-bold">IDENTIFICADOR DE OPERADOR (USUARIO)</label>
+                <label for="username" class="block font-mono text-xs text-slate-600 uppercase tracking-widest mb-2 font-bold">IDENTIFICADOR DE OPERADOR (USUARIO)</label>
                 <div class="relative">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                         </svg>
                     </div>
                     <input type="text" id="username" name="username" required autocomplete="username"
-                           class="w-full bg-cyberBg border border-cyberBorder text-white text-sm rounded pl-10 pr-3 py-2.5 focus:outline-none focus:border-cyberGold focus:ring-1 focus:ring-cyberGold transition-all font-mono" 
+                           class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg pl-10 pr-3.5 py-3 focus:outline-none focus:bg-white focus:border-cyberGold focus:ring-1 focus:ring-cyberGold transition-all font-mono" 
                            placeholder="admin">
                 </div>
             </div>
 
             <div>
-                <label for="password" class="block font-mono text-[10px] text-gray-400 uppercase tracking-widest mb-1.5 font-bold">CLAVE DE SEGURIDAD ENCRIPTADA (CONTRASEÑA)</label>
+                <label for="password" class="block font-mono text-xs text-slate-600 uppercase tracking-widest mb-2 font-bold">CLAVE DE SEGURIDAD ENCRIPTADA (CONTRASEÑA)</label>
                 <div class="relative">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                         </svg>
                     </div>
                     <input type="password" id="password" name="password" required autocomplete="current-password"
-                           class="w-full bg-cyberBg border border-cyberBorder text-white text-sm rounded pl-10 pr-10 py-2.5 focus:outline-none focus:border-cyberGold focus:ring-1 focus:ring-cyberGold transition-all font-mono" 
+                           class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg pl-10 pr-11 py-3 focus:outline-none focus:bg-white focus:border-cyberGold focus:ring-1 focus:ring-cyberGold transition-all font-mono" 
                            placeholder="••••••••••••">
-                    <button type="button" onclick="togglePasswordVisibility()" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white cursor-pointer focus:outline-none">
-                        <svg id="eye-icon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <button type="button" onclick="togglePasswordVisibility()" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer focus:outline-none">
+                        <svg id="eye-icon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                         </svg>
@@ -135,8 +137,8 @@
 
             <div class="pt-2">
                 <button type="submit" 
-                        class="w-full bg-cyberGold text-black font-mono font-bold py-3 px-4 rounded text-xs uppercase tracking-widest hover:bg-cyberGold/90 transition-all cursor-pointer cyber-glow flex items-center justify-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        class="w-full bg-cyberGold hover:bg-amber-700 text-white font-mono font-bold py-3.5 px-4 rounded-lg text-sm uppercase tracking-widest transition-all cursor-pointer cyber-glow flex items-center justify-center gap-2 shadow-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                     </svg>
                     VERIFICAR AUTORIZACIÓN
@@ -144,8 +146,8 @@
             </div>
         </form>
 
-        <div class="mt-8 pt-6 border-t border-cyberBorder text-center">
-            <p class="text-[10px] text-gray-500 font-mono uppercase tracking-wider">
+        <div class="mt-8 pt-6 border-t border-slate-200 text-center">
+            <p class="text-[10px] text-slate-400 font-mono uppercase tracking-wider font-semibold">
                 PROPIEDAD EXCLUSIVA - SOLO PARA OPERADORES AUTORIZADOS
             </p>
         </div>
